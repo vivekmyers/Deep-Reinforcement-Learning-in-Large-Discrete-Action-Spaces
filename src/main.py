@@ -11,7 +11,7 @@ from util.timer import Timer
 
 def run(episodes=2500,
         render=False,
-        experiment='InvertedPendulum-v1',
+        experiment='InvertedPendulum-v2',
         max_actions=1000,
         knn=0.1):
 
