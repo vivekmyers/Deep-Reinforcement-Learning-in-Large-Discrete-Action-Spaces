@@ -64,21 +64,22 @@ class DDPGAgent(Agent):
     BATCH_SIZE = 64
     GAMMA = 0.99
 
-    def __init__(self, env, is_batch_norm=False, is_grad_inverter=True):
+    def __init__(self, env, is_batch_norm=False, is_grad_inverter=True, dim_embed=5):
         super().__init__(env)
 
         if is_batch_norm:
             self.critic_net = CriticNet_bn(self.observation_space_size,
-                                           self.action_space_size)
+                                           self.action_space_size, dim_embed)
             self.actor_net = ActorNet_bn(self.observation_space_size,
-                                         self.action_space_size)
+                                         dim_embed)
 
         else:
             self.critic_net = CriticNet(self.observation_space_size,
-                                        self.action_space_size)
+                                        self.action_space_size, dim_embed)
             self.actor_net = ActorNet(self.observation_space_size,
-                                      self.action_space_size)
+                                      dim_embed)
 
+        self.embed = self.critic_net.embed()
         self.is_grad_inverter = is_grad_inverter
         self.replay_memory = deque()
 
@@ -87,7 +88,7 @@ class DDPGAgent(Agent):
         action_max = np.array(self.high).tolist()
         action_min = np.array(self.low).tolist()
         action_bounds = [action_max, action_min]
-        self.grad_inv = grad_inverter(action_bounds)
+        self.grad_inv = grad_inverter(action_bounds, dim_embed)
 
     def add_data_fetch(self, df):
         self.data_fetch = df

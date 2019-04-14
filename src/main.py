@@ -8,7 +8,6 @@ from ddpg.agent import DDPGAgent
 import util.data
 from util.timer import Timer
 
-
 def run(episodes=2500,
         render=False,
         experiment='InvertedPendulum-v2',
@@ -45,6 +44,7 @@ def run(episodes=2500,
 
         total_reward = 0
         print('Episode ', ep, '/', episodes - 1, 'started...', end='')
+        agent.make_embed()
         for t in range(steps):
 
             if render:

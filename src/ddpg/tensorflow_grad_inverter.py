@@ -6,11 +6,10 @@ import tensorflow as tf
 
 
 class grad_inverter:
-    def __init__(self, action_bounds):
+    def __init__(self, action_bounds, dim_embed):
 
         self.sess = tf.InteractiveSession()       
-        
-        self.action_size = len(action_bounds[0])
+        self.action_size = dim_embed #len(action_bounds[0])
         
         self.action_input = tf.placeholder(tf.float32, [None, self.action_size])
         self.pmax = tf.constant(action_bounds[0], dtype = tf.float32)
@@ -24,5 +23,4 @@ class grad_inverter:
     
     def invert(self, grad, action):
 
-        
         return self.sess.run(self.grad_inverter, feed_dict = {self.action_input: action, self.act_grad: grad[0]})

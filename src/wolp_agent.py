@@ -7,17 +7,20 @@ import action_space
 
 class WolpertingerAgent(agent.DDPGAgent):
 
-    def __init__(self, env, max_actions=1e6, k_ratio=0.1):
-        super().__init__(env)
+    def __init__(self, env, max_actions=1e6, k_ratio=0.1, dim_embed=1):
+        super().__init__(env, False, True, dim_embed)
         self.experiment = env.spec.id
         if self.continious_action_space:
-            self.action_space = action_space.Space(self.low, self.high, max_actions)
+            self.action_space = action_space.Space(self.low, self.high, max_actions, self.embed)
             max_actions = self.action_space.get_number_of_actions()
         else:
             max_actions = int(env.action_space.n)
-            self.action_space = action_space.Discrete_space(max_actions)
+            self.action_space = action_space.Discrete_space(max_actions, self.embed)
 
         self.k_nearest_neighbors = max(1, int(max_actions * k_ratio))
+
+    def make_embed(self):
+        self.action_space.rebuild()
 
     def get_name(self):
         return 'Wolp3_{}k{}_{}'.format(self.action_space.get_number_of_actions(),
