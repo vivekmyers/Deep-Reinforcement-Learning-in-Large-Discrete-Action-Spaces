@@ -93,6 +93,12 @@ class DDPGAgent(Agent):
     def add_data_fetch(self, df):
         self.data_fetch = df
 
+    def freeze(self):
+        self.critic_net.freeze()
+
+    def unfreeze(self):
+        self.critic_net.unfreeze()
+
     def get_name(self):
         return 'DDPG' + super().get_name()
 

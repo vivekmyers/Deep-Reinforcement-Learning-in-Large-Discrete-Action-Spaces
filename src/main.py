@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 import gym
-
 import numpy as np
-
+import signal
 from wolp_agent import *
 from ddpg.agent import DDPGAgent
 import util.data
 from util.timer import Timer
+import matplotlib.pyplot as plt
 
-def run(episodes=2500,
+def run(episodes=100,
         render=False,
         experiment='InvertedPendulum-v2',
         max_actions=1000,
@@ -33,63 +33,86 @@ def run(episodes=2500,
 
     agent.add_data_fetch(data)
     print(data.get_file_name())
+    episode_total = 0
+    cumulative_sum = 0
 
     full_epoch_timer = Timer()
-    reward_sum = 0
+    rewards = []
 
-    for ep in range(episodes):
+    def plot(to=None):
+        plt.figure()
+        plt.plot(np.convolve(rewards, [10 / len(rewards)] * (len(rewards) // 10))[len(rewards) // 10 : -len(rewards) // 10])
+        if to:
+            plt.savefig(to)
+        plt.show()
 
-        timer.reset()
-        observation = env.reset()
 
-        total_reward = 0
-        print('Episode ', ep, '/', episodes - 1, 'started...', end='')
-        agent.make_embed()
-        for t in range(steps):
+    def train(episodes):
+        stop = False
+        def handler(a, b):
+            nonlocal stop
+            stop = True
+        signal.signal(signal.SIGINT, handler)
 
-            if render:
-                env.render()
+        nonlocal episode_total
+        nonlocal cumulative_sum
+        curr_tot = episode_total
 
-            action = agent.act(observation)
+        for ep in range(episodes):
+            if stop: break
+            timer.reset()
+            observation = env.reset()
+            episode_total += 1
+            total_reward = 0
+            print('Episode ', episode_total, 'started...', end='')
+            agent.make_embed()
+            for t in range(steps):
 
-            data.set_action(action.tolist())
+                if render:
+                    env.render()
 
-            data.set_state(observation.tolist())
+                action = agent.act(observation)
 
-            prev_observation = observation
-            observation, reward, done, info = env.step(action[0] if len(action) == 1 else action)
+                data.set_action(action.tolist())
 
-            data.set_reward(reward)
+                data.set_state(observation.tolist())
 
-            episode = {'obs': prev_observation,
-                       'action': action,
-                       'reward': reward,
-                       'obs2': observation,
-                       'done': done,
-                       't': t}
+                prev_observation = observation
+                observation, reward, done, info = env.step(action[0] if len(action) == 1 else action)
 
-            agent.observe(episode)
+                data.set_reward(reward)
 
-            total_reward += reward
+                episode = {'obs': prev_observation,
+                           'action': action,
+                           'reward': reward,
+                           'obs2': observation,
+                           'done': done,
+                           't': t}
 
-            if done or (t == steps - 1):
-                t += 1
-                reward_sum += total_reward
-                time_passed = timer.get_time()
-                print('Reward:{} Steps:{} t:{} ({}/step) Cur avg={}'.format(total_reward, t,
-                                                                            time_passed, round(
-                                                                                time_passed / t),
-                                                                            round(reward_sum / (ep + 1))))
+                agent.observe(episode)
+                total_reward += reward
+                if done or (t == steps - 1):
+                    t += 1
+                    cumulative_sum += total_reward
+                    rewards.append(total_reward)
+                    time_passed = timer.get_time()
+                    print('Reward:{} Steps:{} t:{} ({}/step) Cur avg={}'.format(total_reward, t,
+                                                                                time_passed, round(
+                                                                                    time_passed / t),
+                                                                                round(cumulative_sum / episode_total)))
 
-                data.finish_and_store_episode()
+                    #data.finish_and_store_episode()
 
-                break
-    # end of episodes
-    time = full_epoch_timer.get_time()
-    print('Run {} episodes in {} seconds and got {} average reward'.format(
-        episodes, time / 1000, reward_sum / episodes))
+                    break
+        # end of episodes
+        time = full_epoch_timer.get_time()
+        print('Run {} episodes in {} seconds and got {} average reward'.format(
+            episode_total - curr_tot, time / 1000, cumulative_sum / episode_total))
+        #data.save()
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    data.save()
+
+    from IPython import embed; embed()
 
 
 if __name__ == '__main__':
