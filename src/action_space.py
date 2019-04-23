@@ -24,10 +24,10 @@ class Space:
         self._dimensions = len(low)
         self._points = points
         self._embed = embed
-        self.__base_space = init_uniform_space([0] * self._dimensions,
+        self._base_space = init_uniform_space([0] * self._dimensions,
                                           [1] * self._dimensions,
                                           points, lambda x: x)
-        self.__space = init_uniform_space([0] * self._dimensions,
+        self._space = init_uniform_space([0] * self._dimensions,
                                           [1] * self._dimensions,
                                           points, embed)
         self._flann = pyflann.FLANN()
@@ -35,21 +35,21 @@ class Space:
 
     def rebuild(self):
         points = self._points
-        self.__base_space = init_uniform_space([0] * self._dimensions,
+        self._base_space = init_uniform_space([0] * self._dimensions,
                                           [1] * self._dimensions,
                                           points, lambda x: x)
-        self.__space = init_uniform_space([0] * self._dimensions,
+        self._space = init_uniform_space([0] * self._dimensions,
                                           [1] * self._dimensions,
                                           points, self._embed)
         self._flann = pyflann.FLANN()
         self.rebuild_flann()
 
     def rebuild_flann(self):
-        self._index = self._flann.build_index(self.__space, algorithm='kdtree')
+        self._index = self._flann.build_index(self._space, algorithm='kdtree')
 
     def search_point(self, point, k):
         search_res, _ = self._flann.nn_index(point, k)
-        knns = self.__base_space[search_res]
+        knns = self._base_space[search_res]
         p_out = []
         for p in knns:
             p_out.append(p)
@@ -65,10 +65,10 @@ class Space:
     #    return self._low + point * self._range
 
     def get_space(self):
-        return self.__space
+        return self._space
 
     def shape(self):
-        return self.__space.shape
+        return self._space.shape
 
     def get_number_of_actions(self):
         return self.shape()[0]
