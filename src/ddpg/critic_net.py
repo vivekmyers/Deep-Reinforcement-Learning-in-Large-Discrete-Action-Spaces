@@ -35,7 +35,8 @@ class CriticNet:
                 tf.reduce_sum(tf.pow(self.W2_c, 2)) + 0.0001 * tf.reduce_sum(tf.pow(self.B2_c, 2))
             self.cost = tf.pow(self.critic_q_model - self.q_value_in, 2) / BATCH_SIZE + \
                 self.l2_regularizer_loss  # /tf.to_float(tf.shape(self.q_value_in)[0])
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(self.cost)
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(self.cost, var_list=[ 
+                self.embed_W_1, self.embed_B_1, self.embed_W_2, self.embed_B_2])
             self.freeze_optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(self.cost, var_list=[self.W1_c, self.B1_c,
                 self.W2_c, self.W2_action_c, self.B2_c, self.W3_c, self.B3_c])
 
