@@ -7,22 +7,27 @@ from ddpg.agent import DDPGAgent
 import util.data
 from util.timer import Timer
 import matplotlib.pyplot as plt
+import reco_gym
+from collections import namedtuple
+from reco_gym import env_1_args, Configuration
 
 def run(episodes=100,
         render=False,
-        experiment='InvertedPendulum-v2',
-        max_actions=1000,
+        max_actions=1e6,
         knn=0.1):
-
+    experiment = 'reco-gym-v1'
     env = gym.make(experiment)
-
+    env_1_args['num_products'] = 100
+    env.init_gym(env_1_args)
+    obs_space = namedtuple('obs_space', ['n'])
+    env.observation_space = obs_space(env_1_args['num_products'])
     print(env.observation_space)
     print(env.action_space)
 
-    steps = env.spec.timestep_limit
+    steps = 50 #env.spec.timestep_limit
 
     # agent = DDPGAgent(env)
-    agent = WolpertingerAgent(env, max_actions=max_actions, k_ratio=knn)
+    agent = WolpertingerAgent(env, max_actions=max_actions, k_ratio=knn, dim_embed=5)
 
     timer = Timer()
 
@@ -46,6 +51,12 @@ def run(episodes=100,
             plt.savefig(to)
         plt.show()
 
+    def parse(obs):
+        img = np.zeros(env.observation_space.n)
+        if obs:
+            for i in obs.sessions():
+                img[i['v']] += 1
+        return img
 
     def train(episodes):
         stop = False
@@ -61,7 +72,9 @@ def run(episodes=100,
         for ep in range(episodes):
             if stop: break
             timer.reset()
-            observation = env.reset()
+            observation = parse(env.reset())
+            observation, reward, done, info = env.step(None)
+            observation = parse(observation)
             episode_total += 1
             total_reward = 0
             print('Episode ', episode_total, 'started...', end='')
@@ -78,8 +91,8 @@ def run(episodes=100,
                 data.set_state(observation.tolist())
 
                 prev_observation = observation
-                observation, reward, done, info = env.step(action[0] if len(action) == 1 else action)
-
+                observation, reward, done, info = env.step(int(action[0] if len(action) == 1 else action))
+                observation = parse(observation)
                 data.set_reward(reward)
 
                 episode = {'obs': prev_observation,
@@ -104,6 +117,12 @@ def run(episodes=100,
                     #data.finish_and_store_episode()
 
                     break
+        def iterate(num=20):
+            for i in range(num): 
+                agent.unfreeze()
+                train(200)
+                agent.freeze()
+                train(1000)
         # end of episodes
         time = full_epoch_timer.get_time()
         print('Run {} episodes in {} seconds and got {} average reward'.format(
