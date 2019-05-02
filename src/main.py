@@ -9,6 +9,7 @@ from util.timer import Timer
 import matplotlib.pyplot as plt
 import reco_gym
 from collections import namedtuple
+import random
 from reco_gym import env_1_args, Configuration
 
 def run(episodes=100,
@@ -17,17 +18,17 @@ def run(episodes=100,
         knn=0.1):
     experiment = 'reco-gym-v1'
     env = gym.make(experiment)
-    env_1_args['num_products'] = 100
+    env_1_args['num_products'] = 10
     env.init_gym(env_1_args)
     obs_space = namedtuple('obs_space', ['n'])
-    env.observation_space = obs_space(env_1_args['num_products'])
+    env.observation_space = obs_space(env_1_args['num_products'] * 2)
     print(env.observation_space)
     print(env.action_space)
 
-    steps = 50 #env.spec.timestep_limit
+    steps = 10 #env.spec.timestep_limit
 
     # agent = DDPGAgent(env)
-    agent = WolpertingerAgent(env, max_actions=max_actions, k_ratio=knn, dim_embed=5)
+    agent = WolpertingerAgent(env, max_actions=max_actions, k_ratio=knn, dim_embed=2)
 
     timer = Timer()
 
@@ -54,8 +55,10 @@ def run(episodes=100,
     def parse(obs):
         img = np.zeros(env.observation_space.n)
         if obs:
+            print(obs.sessions())
             for i in obs.sessions():
                 img[i['v']] += 1
+                img[i['u'] + env.observation_space.n // 2] += 1
         return img
 
     def train(episodes):
@@ -85,6 +88,7 @@ def run(episodes=100,
                     env.render()
 
                 action = agent.act(observation)
+                if random.random() < 0.1: print(action)
 
                 data.set_action(action.tolist())
 
@@ -117,12 +121,6 @@ def run(episodes=100,
                     #data.finish_and_store_episode()
 
                     break
-        def iterate(num=20):
-            for i in range(num): 
-                agent.unfreeze()
-                train(200)
-                agent.freeze()
-                train(1000)
         # end of episodes
         time = full_epoch_timer.get_time()
         print('Run {} episodes in {} seconds and got {} average reward'.format(
@@ -130,6 +128,13 @@ def run(episodes=100,
         #data.save()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+
+    def iterate(num=20):
+        for i in range(num): 
+            agent.unfreeze()
+            train(200)
+            agent.freeze()
+            train(1000)
 
     from IPython import embed; embed()
 
