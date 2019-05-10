@@ -21,7 +21,7 @@ def run(episodes=100,
     env_1_args['num_products'] = 10
     env.init_gym(env_1_args)
     obs_space = namedtuple('obs_space', ['n'])
-    env.observation_space = obs_space(env_1_args['num_products'] * 2)
+    env.observation_space = obs_space(env_1_args['num_products'])
     print(env.observation_space)
     print(env.action_space)
 
@@ -55,16 +55,18 @@ def run(episodes=100,
     def parse(obs):
         img = np.zeros(env.observation_space.n)
         if obs:
-            print(obs.sessions())
             for i in obs.sessions():
                 img[i['v']] += 1
-                img[i['u'] + env.observation_space.n // 2] += 1
         return img
+
+    lock = False
 
     def train(episodes):
         stop = False
         def handler(a, b):
             nonlocal stop
+            nonlocal lock
+            lock = True
             stop = True
         signal.signal(signal.SIGINT, handler)
 
@@ -88,7 +90,6 @@ def run(episodes=100,
                     env.render()
 
                 action = agent.act(observation)
-                if random.random() < 0.1: print(action)
 
                 data.set_action(action.tolist())
 
@@ -130,11 +131,15 @@ def run(episodes=100,
 
 
     def iterate(num=20):
+        nonlocal lock
         for i in range(num): 
             agent.unfreeze()
             train(200)
+            if lock: break
             agent.freeze()
             train(1000)
+            if lock: break
+        lock = False
 
     from IPython import embed; embed()
 
