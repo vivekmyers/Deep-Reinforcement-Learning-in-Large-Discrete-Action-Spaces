@@ -25,5 +25,5 @@ results/obj/saved/*
 !results/obj/temp/
 results/obj/temp/*
 !results/obj/temp/README.md
-
+.DS_Store
 data
