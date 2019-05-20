@@ -32,7 +32,7 @@ class CriticNet:
             self.q_value_in = tf.placeholder("float", [None, 1])  # supervisor
             #self.l2_regularizer_loss = tf.nn.l2_loss(self.W1_c)+tf.nn.l2_loss(self.W2_c)+ tf.nn.l2_loss(self.W2_action_c) + tf.nn.l2_loss(self.W3_c)+tf.nn.l2_loss(self.B1_c)+tf.nn.l2_loss(self.B2_c)+tf.nn.l2_loss(self.B3_c)
             self.l2_regularizer_loss = 0.0001 * \
-                tf.reduce_sum(tf.pow(self.W2_c, 2)) + 0.0001 * tf.reduce_sum(tf.pow(self.B2_c, 2))
+                tf.reduce_sum(tf.pow(self.W2_c, 2)) + 0.0001 * tf.reduce_sum(tf.pow(self.B2_c, 2)) + 0.0001 * tf.reduce_sum(tf.pow(self.embed_c, 2))
             self.cost = tf.pow(self.critic_q_model - self.q_value_in, 2) / BATCH_SIZE + \
                 self.l2_regularizer_loss  # /tf.to_float(tf.shape(self.q_value_in)[0])
             self.optimizer = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(self.cost, var_list=[ 

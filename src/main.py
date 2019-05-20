@@ -7,28 +7,27 @@ from ddpg.agent import DDPGAgent
 import util.data
 from util.timer import Timer
 import matplotlib.pyplot as plt
-import reco_gym
+#import reco_gym
 from collections import namedtuple
 import random
-from reco_gym import env_1_args, Configuration
+#from reco_gym import env_1_args, Configuration
 
 def run(episodes=100,
         render=False,
-        max_actions=1e6,
-        knn=0.1):
-    experiment = 'reco-gym-v1'
+        max_actions=1e3,
+        experiment='InvertedPendulum-v2',
+        iters=20,
+        name=None,
+        dim=3,
+        knn=1.0):
     env = gym.make(experiment)
-    env_1_args['num_products'] = 10
-    env.init_gym(env_1_args)
-    obs_space = namedtuple('obs_space', ['n'])
-    env.observation_space = obs_space(env_1_args['num_products'])
     print(env.observation_space)
     print(env.action_space)
 
-    steps = 10 #env.spec.timestep_limit
+    steps = env.spec.timestep_limit
 
     # agent = DDPGAgent(env)
-    agent = WolpertingerAgent(env, max_actions=max_actions, k_ratio=knn, dim_embed=2)
+    agent = WolpertingerAgent(env, max_actions=max_actions, k_ratio=knn, dim_embed=dim)
 
     timer = Timer()
 
@@ -47,17 +46,20 @@ def run(episodes=100,
 
     def plot(to=None):
         plt.figure()
-        plt.plot(np.convolve(rewards, [10 / len(rewards)] * (len(rewards) // 10))[len(rewards) // 10 : -len(rewards) // 10])
+        plt.title(experiment)
+        plt.xlabel('Iteration')
+        plt.ylabel('Reward')
+        n = len(rewards) // 20
+        r = rewards
+        smooth = np.convolve(n * [r[0]] + rewards + n * [r[-1]],
+            [1 / n] * n)
+        c = plt.plot(r, alpha=0.2)
+        plt.plot(smooth[n : len(r) + n], c=c[0].get_color())
         if to:
             plt.savefig(to)
-        plt.show()
 
     def parse(obs):
-        img = np.zeros(env.observation_space.n)
-        if obs:
-            for i in obs.sessions():
-                img[i['v']] += 1
-        return img
+        return obs
 
     lock = False
 
@@ -78,8 +80,6 @@ def run(episodes=100,
             if stop: break
             timer.reset()
             observation = parse(env.reset())
-            observation, reward, done, info = env.step(None)
-            observation = parse(observation)
             episode_total += 1
             total_reward = 0
             print('Episode ', episode_total, 'started...', end='')
@@ -96,7 +96,7 @@ def run(episodes=100,
                 data.set_state(observation.tolist())
 
                 prev_observation = observation
-                observation, reward, done, info = env.step(int(action[0] if len(action) == 1 else action))
+                observation, reward, done, info = env.step(action[0] if len(action) == 1 else action)
                 observation = parse(observation)
                 data.set_reward(reward)
 
@@ -130,19 +130,25 @@ def run(episodes=100,
         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
-    def iterate(num=20):
+    def iterate(num=iters):
         nonlocal lock
+        nonlocal knn
         for i in range(num): 
-            agent.unfreeze()
-            train(200)
+            agent.train_agent()
+            train(100)
             if lock: break
-            agent.freeze()
-            train(1000)
+            agent.train_embed()
+            train(20)
             if lock: break
+            knn /= 2
+            if knn < 0.1:
+                knn = 0.1
+            agent.anneal(knn)
+            plot(name)
         lock = False
-
-    from IPython import embed; embed()
+    
+    iterate()
 
 
 if __name__ == '__main__':
-    run()
+    from IPython import embed; embed(using=0)

@@ -12,6 +12,7 @@ class grad_inverter:
         self.action_size = dim_embed #len(action_bounds[0])
         
         self.action_input = tf.placeholder(tf.float32, [None, self.action_size])
+        print('Bounds', action_bounds)
         self.pmax = tf.constant(action_bounds[0], dtype = tf.float32)
         self.pmin = tf.constant(action_bounds[1], dtype = tf.float32)
         self.prange = tf.constant([x - y for x, y in zip(action_bounds[0],action_bounds[1])], dtype = tf.float32)

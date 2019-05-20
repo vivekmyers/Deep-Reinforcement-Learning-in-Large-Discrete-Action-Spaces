@@ -12,6 +12,7 @@ from actor_net_bn import ActorNet_bn
 from critic_net_bn import CriticNet_bn
 from tensorflow_grad_inverter import grad_inverter
 
+from math import inf
 from collections import deque
 
 """Some agent implementations including stevenpjg's DDPG agent"""
@@ -85,18 +86,18 @@ class DDPGAgent(Agent):
 
         self.time_step = 0
 
-        action_max = np.array(self.high).tolist()
-        action_min = np.array(self.low).tolist()
+        action_max = [1] * dim_embed
+        action_min = [-1] * dim_embed
         action_bounds = [action_max, action_min]
         self.grad_inv = grad_inverter(action_bounds, dim_embed)
 
     def add_data_fetch(self, df):
         self.data_fetch = df
 
-    def freeze(self):
+    def train_agent(self):
         self.critic_net.freeze()
 
-    def unfreeze(self):
+    def train_embed(self):
         self.critic_net.unfreeze()
 
     def get_name(self):

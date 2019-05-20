@@ -19,6 +19,14 @@ class WolpertingerAgent(agent.DDPGAgent):
 
         self.k_nearest_neighbors = max(1, int(max_actions * k_ratio))
 
+    def anneal(self, k_ratio):
+        if self.continious_action_space:
+            max_actions = self.action_space.get_number_of_actions()
+        else:
+            max_actions = int(env.action_space.n)
+        self.k_nearest_neighbors = max(1, int(max_actions * k_ratio))
+
+
     def make_embed(self):
         self.action_space.rebuild()
 
